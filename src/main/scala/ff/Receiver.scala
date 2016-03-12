@@ -1,19 +1,17 @@
 package ff
 
-import akka.actor.Props
-import akka.stream.actor._
+import akka.actor.{Actor, ActorLogging, Props}
 
-class Receiver extends ActorSubscriber {
+class Receiver(emitPower: Int => Unit) extends Actor with ActorLogging {
 
-  import ActorSubscriberMessage._
-
-  override def requestStrategy =
-    OneByOneRequestStrategy
+  var count = 1
 
   override def receive: Receive = {
 
-    case OnNext(x) =>
-      println(x)
+    case x =>
+      count += 1
+      emitPower(count % 40)
+      println(x.toString)
 
   }
 
@@ -21,6 +19,6 @@ class Receiver extends ActorSubscriber {
 
 object Receiver {
 
-  def props: Props = Props(new Receiver)
+  def props(emitPower: Int => Unit): Props = Props(classOf[Receiver], emitPower)
 
 }

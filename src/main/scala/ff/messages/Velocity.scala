@@ -1,7 +1,7 @@
 package ff.messages
 
 case class Velocity(
-                     raceTrackId: String,
+                     racetrackId: String,
                      timeStamp: Int,
                      velocity: Double,
                      t: Int
