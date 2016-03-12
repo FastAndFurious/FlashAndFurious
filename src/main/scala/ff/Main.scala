@@ -36,31 +36,27 @@ object Main extends App with LazyLogging {
   val ANNOUNCE = s"/app/pilots/announce"
   val POWER = s"/app/pilots/power"
 
-  // streaming invoices to Accounting Department
-  val connection = Connection()
-
-  // create org.reactivestreams.Publisher
-  val queue = connection.consume(queue = POWER)
+  val rabbit = Connection()
 
   // create org.reactivestreams.Subscriber
-  val exchange = connection.publish(exchange = "accounting_department", routingKey = "invoices")
+  val exchange = rabbit.publish(exchange = "accounting_department", routingKey = "invoices")
 
-  def parse(delivery: Delivery): JsValue =
+  def deserialize(delivery: Delivery): JsValue =
     ByteString.fromArray(delivery.message.body.toArray).utf8String.parseJson
 
-  val sensors = Source.fromPublisher(connection.consume(SENSOR_TEMPLATE)).map(parse(_).convertTo[Sensor])
-  val penalties = Source.fromPublisher(connection.consume(PENALTY_TEMPLATE)).map(parse(_).convertTo[Penalty])
-  val roundTimes = Source.fromPublisher(connection.consume(ROUND_PASSED_TEMPLATE)).map(parse(_).convertTo[RoundTime])
-  val velocities = Source.fromPublisher(connection.consume(VELOCITY_TEMPLATE)).map(parse(_).convertTo[Velocity])
+  //def deserialize(delivery: Delivery): JsValue =
+  //  ByteString.fromArray(delivery.message.body.toArray).utf8String.parseJson
 
-  // Run akka-streams with queue as Source and exchange as Sink
+  val sensors = Source.fromPublisher(rabbit.consume(SENSOR_TEMPLATE)).map(deserialize(_).convertTo[Sensor])
+  val penalties = Source.fromPublisher(rabbit.consume(PENALTY_TEMPLATE)).map(deserialize(_).convertTo[Penalty])
+  val roundTimes = Source.fromPublisher(rabbit.consume(ROUND_PASSED_TEMPLATE)).map(deserialize(_).convertTo[RoundTime])
+  val velocities = Source.fromPublisher(rabbit.consume(VELOCITY_TEMPLATE)).map(deserialize(_).convertTo[Velocity])
+
+  val receiver = system.actorOf(Receiver.props)
+
   Source
     .combine(sensors, penalties, roundTimes, velocities)(Merge(_))
-    .map { x =>
-      println(x)
-      x
-    }
-    .runWith(Sink.ignore)
+    .runWith(Sink.actorSubscriber(Receiver.props))
 
   //Sink.fromSubscriber(exchange))
 
