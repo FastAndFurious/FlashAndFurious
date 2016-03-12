@@ -74,11 +74,14 @@ object Main extends App {
     publisher ! Power(id, accessCode, power)
   }
 
-  val lapper = ConstantLaps.props(140)
+  val lapper = ConstantLaps.props(110)
 
   val receiver = system.actorOf(lapper)
   Source
     .combine(sensors, penalties, roundTimes, velocities, raceStart, raceStop)(Merge(_))
+      .map{x =>
+        println(x)
+        x}
     .runWith(Sink.actorRef(receiver, () => println("finished")))
 
   val keepAlive =
