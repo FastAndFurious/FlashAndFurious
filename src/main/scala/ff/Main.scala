@@ -1,5 +1,7 @@
 package ff
 
+import java.util.logging.LogManager
+
 import akka.actor.ActorSystem
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
@@ -16,6 +18,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
 
 object Main extends App {
+
+  LogManager.getLogManager.readConfiguration()
 
   val id = "FlashAndFurious"
   val accessCode = "zajorsida"

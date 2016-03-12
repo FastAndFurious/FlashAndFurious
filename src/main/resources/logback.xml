@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>INFO</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>
+                %X{akkaTimestamp}  %-5level %replace(%-50.-300msg){'\\r\\n', ' '} %-30logger{30} %ex{short}%n
+            </pattern>
+        </encoder>
+    </appender>
+    <root level="ALL">
+        <appender-ref ref="STDOUT"/>
+    </root>
+</configuration>
