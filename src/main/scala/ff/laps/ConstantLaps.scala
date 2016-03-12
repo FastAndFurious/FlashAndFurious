@@ -19,6 +19,10 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
   var time_start_lap = 0
   var speed_coef = 0.0
 
+  var time_start = 0
+  var elapsed = 0
+  var tokens = mutable.ListBuffer[Token]()
+
   final override def receive: Receive = waitOnStart
 
   final def waitOnStart: Receive = {
@@ -33,8 +37,95 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
 
   final def waitOnStop: Receive = {
 
-    case s@Sensor(_,t,_,g,_,_) =>
-      if (lap == -1) {
+    case s@Sensor(_, t, _, g, _, _) =>
+
+      if (time_start == 0)
+        time_start = t
+      else {
+        elapsed = t - time_start
+
+        if(elapsed < 20000) {
+          // discover max gyr
+          if(Math.abs(g._3) > gyr_max)
+            gyr_max = Math.abs(g._3)
+
+          Main.emitPower(pow)
+        } else if (elapsed < 40000) {
+          // discover map
+          tokenizer.tokenize(g._3, t, gyr_max/3)
+
+          Main.emitPower(pow)
+        } else {
+          // run strategy
+          if (loopCursor == 0)
+            loop = longuestSubSequence(tokenizer.getLoop())
+
+          val curToken = tokenizer.tokenize(g._3, t, gyr_max / 3)
+          if (lastToken == null) {
+            // penser cas ou c'est pas egal.
+            if (curToken.direction == loop(loopCursor).direction)
+              lastToken = curToken
+            else if (curToken.direction == loop((loopCursor + 1) % loop.length).direction) {
+              lastToken = curToken
+              loopCursor += 1
+            } else
+              log.info("on est daans la merde !")
+          } else {
+            lastToken = curToken
+            if (curToken.direction == loop((loopCursor + 1) % loop.length).direction) {
+              loopCursor += 1
+            }
+          }
+
+          loopCursor = loopCursor % loop.length
+
+          curToken match {
+            case Straight(dur) => loop(loopCursor) match {
+              case Straight(dur2) => loop((loopCursor + 1) % loop.length) match {
+                case s: Straight => speed_coef = 1
+                case LeftTurn(_, _) if dur < dur2 / 3 => speed_coef = 1
+                case LeftTurn(_, steer) => speed_coef = -steer / gyr_max
+                case RightTurn(_, _) if dur < dur2 / 3 => speed_coef = 1
+                case RightTurn(_, steer) => speed_coef = -steer / gyr_max
+              }
+              case LeftTurn(_, _) => log.debug("merde!")
+              case RightTurn(_, _) => log.debug("merde!")
+            }
+            case LeftTurn(dur, _) => loop(loopCursor) match {
+              case LeftTurn(dur2, steering) => loop((loopCursor + 1) % loop.length) match {
+                case s: Straight if dur < 2 * dur2 / 3 => speed_coef = -steering / gyr_max
+                case Straight(_) => speed_coef = 1
+                case LeftTurn(_, _) => speed_coef = -steering / gyr_max
+                case RightTurn(_, _) => speed_coef = -steering / gyr_max
+              }
+              case Straight(_) => log.debug("merde!")
+              case RightTurn(_, _) => log.debug("merde!")
+            }
+            case RightTurn(dur, _) => loop(loopCursor) match {
+              case RightTurn(dur2, steering) => loop((loopCursor + 1) % loop.length) match {
+                case s: Straight if dur < 2 * dur2 / 3 => speed_coef = -steering / gyr_max
+                case Straight(_) => speed_coef = 1
+                case LeftTurn(_, _) => speed_coef = -steering / gyr_max
+                case RightTurn(_, _) => speed_coef = -steering / gyr_max
+              }
+              case LeftTurn(_, _) => log.debug("merde!")
+              case Straight(_) => log.debug("merde!")
+            }
+          }
+
+          log.debug("scoef = " + speed_coef)
+          log.debug("dir = " + curToken.direction.toString)
+          log.debug("prev dur = " + loop(loopCursor).duration.toString)
+          log.debug("dur = " + curToken.duration.toString)
+          log.debug("next dir = " + loop((loopCursor + 1) % loop.length).direction.toString)
+          Main.emitPower(pow + 10 + (40 * speed_coef).toInt)
+        }
+      }
+
+
+
+
+      /* if (lap == -1) {
         Main.emitPower(pow)
       }
       if (lap <= 1) {
@@ -42,12 +133,12 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
           gyr_max = math.abs(g._3)
         }
         Main.emitPower(pow)
-        tokenizer.tokenize(g._3, t, gyr_max/3)
+        tokenizer.tokenize(g._3, t, gyr_max / 3)
       } else if (lap == 2) {
         Main.emitPower(pow)
-        log.debug(tokenizer.tokenize(g._3, t, gyr_max/3).direction.toString)
+        log.debug(tokenizer.tokenize(g._3, t, gyr_max / 3).direction.toString)
       } else {
-        val curToken = tokenizer.tokenize(g._3, t, gyr_max/3)
+        val curToken = tokenizer.tokenize(g._3, t, gyr_max / 3)
         if (lastToken == null) {
           // penser cas ou c'est pas egal.
           if (curToken.direction == loop(loopCursor).direction)
@@ -55,7 +146,7 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
           else if (curToken.direction == loop((loopCursor + 1) % loop.length).direction) {
             lastToken = curToken
             loopCursor += 1
-          }else
+          } else
             log.info("on est daans la merde !")
         } else {
           lastToken = curToken
@@ -69,33 +160,33 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
         curToken match {
           case Straight(dur) => loop(loopCursor) match {
             case Straight(dur2) => loop((loopCursor + 1) % loop.length) match {
-              case s:Straight => speed_coef = 1
-              case LeftTurn(_,_) if dur < dur2/3 => speed_coef = 1
-              case LeftTurn(_,steer) => speed_coef = -steer/gyr_max
-              case RightTurn(_,_) if dur < dur2/3 => speed_coef = 1
-              case RightTurn(_,steer) => speed_coef = -steer/gyr_max
+              case s: Straight => speed_coef = 1
+              case LeftTurn(_, _) if dur < dur2 / 3 => speed_coef = 1
+              case LeftTurn(_, steer) => speed_coef = -steer / gyr_max
+              case RightTurn(_, _) if dur < dur2 / 3 => speed_coef = 1
+              case RightTurn(_, steer) => speed_coef = -steer / gyr_max
             }
-            case LeftTurn(_,_) => log.debug("merde!")
-            case RightTurn(_,_) => log.debug("merde!")
+            case LeftTurn(_, _) => log.debug("merde!")
+            case RightTurn(_, _) => log.debug("merde!")
           }
-          case LeftTurn(dur,_) => loop(loopCursor) match {
+          case LeftTurn(dur, _) => loop(loopCursor) match {
             case LeftTurn(dur2, steering) => loop((loopCursor + 1) % loop.length) match {
-              case s:Straight if dur < 2*dur2/3 => speed_coef = -steering/gyr_max
+              case s: Straight if dur < 2 * dur2 / 3 => speed_coef = -steering / gyr_max
               case Straight(_) => speed_coef = 1
-              case LeftTurn(_,_) => speed_coef = -steering/gyr_max
-              case RightTurn(_,_) => speed_coef = -steering/gyr_max
+              case LeftTurn(_, _) => speed_coef = -steering / gyr_max
+              case RightTurn(_, _) => speed_coef = -steering / gyr_max
             }
             case Straight(_) => log.debug("merde!")
-            case RightTurn(_,_) => log.debug("merde!")
+            case RightTurn(_, _) => log.debug("merde!")
           }
-          case RightTurn(dur,_) => loop(loopCursor) match {
+          case RightTurn(dur, _) => loop(loopCursor) match {
             case RightTurn(dur2, steering) => loop((loopCursor + 1) % loop.length) match {
-              case s:Straight if dur < 2*dur2/3 => speed_coef = -steering/gyr_max
+              case s: Straight if dur < 2 * dur2 / 3 => speed_coef = -steering / gyr_max
               case Straight(_) => speed_coef = 1
-              case LeftTurn(_,_) => speed_coef = -steering/gyr_max
-              case RightTurn(_,_) => speed_coef = -steering/gyr_max
+              case LeftTurn(_, _) => speed_coef = -steering / gyr_max
+              case RightTurn(_, _) => speed_coef = -steering / gyr_max
             }
-            case LeftTurn(_,_) => log.debug("merde!")
+            case LeftTurn(_, _) => log.debug("merde!")
             case Straight(_) => log.debug("merde!")
           }
         }
@@ -105,13 +196,13 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
         log.debug("prev dur = " + loop(loopCursor).duration.toString)
         log.debug("dur = " + curToken.duration.toString)
         log.debug("next dir = " + loop((loopCursor + 1) % loop.length).direction.toString)
-        Main.emitPower(pow + 10 + (40*speed_coef).toInt)
+        Main.emitPower(pow + 10 + (40 * speed_coef).toInt)
 
-      }
+      } */
 
       s match {
         case Sensor(_, ts, (a1, a2, a3), (g1, g2, g3), (m1, m2, m3), t) =>
-          //log.info(s"$ts $a1 $a2 $a3 $g1 $g2 $g3 $m1 $m2 $m3 $t")
+        //log.info(s"$ts $a1 $a2 $a3 $g1 $g2 $g3 $m1 $m2 $m3 $t")
       }
 
 
@@ -128,7 +219,7 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
         time_start_lap = r.timestamp
         lap += 1
         log.info("max :" + gyr_max.toString)
-        if (lap >= 3){
+        if (lap >= 3) {
           log.debug("turns : " + tokenizer.loop)
           loop = tokenizer.getLoop()
         } else {
@@ -147,16 +238,16 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
       gyr_max = 0
       max_pow = 140
     case x =>
-      //log.warning(s"race stop expected, got: $x")
+    //log.warning(s"race stop expected, got: $x")
   }
 
   def longuestSubSequence(seq: mutable.ListBuffer[Token]): ListBuffer[Token] = {
 
     def req(nseq: mutable.ListBuffer[Token], tail: mutable.ListBuffer[Token], acc: mutable.ListBuffer[Token]): mutable.ListBuffer[Token] = {
       if (nseq.length > 0) {
-        val nseq2 = nseq.take(nseq.length-1)
+        val nseq2 = nseq.take(nseq.length - 1)
         val ntail = tail.tail
-        val nacc = tail.tail.zip(nseq.take(nseq.length-1)).takeWhile((x) => x._1 == x._2).map(_._1)
+        val nacc = tail.tail.zip(nseq.take(nseq.length - 1)).takeWhile((x) => x._1 == x._2).map(_._1)
 
         req(nseq2, ntail, if (acc.length < nacc.length) nacc else acc)
       } else {
