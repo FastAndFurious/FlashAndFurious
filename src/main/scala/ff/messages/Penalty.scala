@@ -5,5 +5,5 @@ case class Penalty(
                     actualSpeed: Double,
                     speedLimit: Double,
                     penalty_ms: Double,
-                    barrier: Option[Int]
+                    barrier: String
                   ) extends Message
