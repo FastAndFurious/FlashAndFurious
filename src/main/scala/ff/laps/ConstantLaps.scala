@@ -2,7 +2,7 @@ package ff.laps
 
 import akka.actor.{Actor, ActorLogging, Props}
 import ff.Main
-import ff.messages.{RaceStart, RaceStop}
+import ff.messages.{Sensor, RaceStart, RaceStop}
 
 class ConstantLaps(pow: Int) extends Actor with ActorLogging {
 
@@ -19,6 +19,11 @@ class ConstantLaps(pow: Int) extends Actor with ActorLogging {
   final def waitOnStop: Receive = {
     case x if x != RaceStop =>
       Main.emitPower(pow)
+
+      x match {
+        case Sensor(_, ts, (a1, a2, a3), (g1, g2, g3), (m1, m2, m3), t) =>
+          log.info(s"$ts $a1 $a2 $a3 $g1 $g2 $g3 $m1 $m2 $m3 $t")
+      }
 
     case RaceStop =>
       context.become(waitOnStart)
