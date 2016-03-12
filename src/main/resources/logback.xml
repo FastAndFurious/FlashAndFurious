@@ -4,7 +4,7 @@
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>
-                %X{akkaTimestamp}  %-5level %replace(%-50.-300msg){'\\r\\n', ' '} %-30logger{30} %ex{short}%n
+                %X{akkaTimestamp}  %-5level %replace(%-50.-300msg){'\\r\\n', ' '} %-30logger{30} %ex{full}%n
             </pattern>
         </encoder>
     </appender>
