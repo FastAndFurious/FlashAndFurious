@@ -74,7 +74,7 @@ object Main extends App {
     publisher ! Power(id, accessCode, power)
   }
 
-  val lapper = ConstantLaps.props(140)//Receiver
+  val lapper = ConstantLaps.props(140)
 
   val receiver = system.actorOf(lapper)
   Source

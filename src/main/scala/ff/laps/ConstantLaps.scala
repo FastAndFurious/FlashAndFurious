@@ -1,14 +1,30 @@
 package ff.laps
 
-import akka.actor.Props
+import akka.actor.{Actor, ActorLogging, Props}
 import ff.Main
-import ff.messages.RaceStop
+import ff.messages.{RaceStart, RaceStop}
 
-class ConstantLaps(pow: Int) extends Lapper {
+class ConstantLaps(pow: Int) extends Actor with ActorLogging {
 
-  def running: Receive = {
+  final override def receive: Receive = waitOnStart
+
+  final def waitOnStart: Receive = {
+    case RaceStart =>
+      context.become(waitOnStop)
+      log.info(s"race started")
+    case x =>
+      log.warning(s"race start expected, got: $x")
+  }
+
+  final def waitOnStop: Receive = {
     case x if x != RaceStop =>
       Main.emitPower(pow)
+
+    case RaceStop =>
+      context.become(waitOnStart)
+      log.info(s"race stopped")
+    case x =>
+      log.warning(s"race stop expected, got: $x")
   }
 
 }
