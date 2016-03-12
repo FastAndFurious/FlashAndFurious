@@ -9,10 +9,11 @@ import akka.util.ByteString
 import ff.laps.ConstantLaps
 import ff.messages._
 import io.scalac.amqp
-import io.scalac.amqp.{Connection, Delivery}
+import io.scalac.amqp.{Queue, Connection, Delivery}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.postfixOps
@@ -53,7 +54,15 @@ object Main extends App {
   def serialize(pow: Power): amqp.Message =
     amqp.Message(ByteString(pow.toJson.toString()).toIndexedSeq)
 
-  //val powers = rabbit.publish(exchange = "", routingKey = POWER)
+  Await.result(Future.sequence(Seq(
+    rabbit.queueDeclare(Queue(START_TEMPLATE, durable = true)),
+    rabbit.queueDeclare(Queue(STOP_TEMPLATE, durable = true)),
+    rabbit.queueDeclare(Queue(SENSOR_TEMPLATE, durable = true)),
+    rabbit.queueDeclare(Queue(VELOCITY_TEMPLATE, durable = true)),
+    rabbit.queueDeclare(Queue(PENALTY_TEMPLATE, durable = true)),
+    rabbit.queueDeclare(Queue(ROUND_PASSED_TEMPLATE, durable = true))
+  )), 30 second)
+
   val announces = rabbit.publish(exchange = "", routingKey = ANNOUNCE)
   val powers = rabbit.publish(exchange = "", routingKey = POWER)
 

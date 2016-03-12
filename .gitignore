@@ -128,4 +128,4 @@ project/plugins/project/
 
 *.rdb
 
-
+!save-*.log
