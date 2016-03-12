@@ -53,8 +53,9 @@ object Main extends App {
   def serialize(pow: Power): amqp.Message =
     amqp.Message(ByteString(pow.toJson.toString()).toIndexedSeq)
 
-  val powers = rabbit.publish(exchange = "", routingKey = POWER)
+  //val powers = rabbit.publish(exchange = "", routingKey = POWER)
   val announces = rabbit.publish(exchange = "", routingKey = ANNOUNCE)
+  val powers = rabbit.publish(exchange = "", routingKey = POWER)
 
   val sensors = Source.fromPublisher(rabbit.consume(SENSOR_TEMPLATE)).map(deserialize(_).convertTo[Sensor])
   val penalties = Source.fromPublisher(rabbit.consume(PENALTY_TEMPLATE)).map(deserialize(_).convertTo[Penalty])

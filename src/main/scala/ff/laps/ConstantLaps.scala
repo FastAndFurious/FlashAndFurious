@@ -19,7 +19,7 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
 
 
     case x =>
-      log.warning(s"race start expected, got: $x")
+      log.warning(s"race start expected, got: $x ${sender()}")
   }
 
   final def waitOnStop: Receive = {
