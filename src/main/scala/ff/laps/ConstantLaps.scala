@@ -158,7 +158,7 @@ class ConstantLaps(var pow: Int) extends Actor with ActorLogging {
         val ntail = tail.tail
         val nacc = tail.tail.zip(nseq.take(nseq.length-1)).takeWhile((x) => x._1 == x._2).map(_._1)
 
-        req(nseq2, ntail, if (acc.length < nacc.length) acc else nacc)
+        req(nseq2, ntail, if (acc.length < nacc.length) nacc else acc)
       } else {
         acc
       }

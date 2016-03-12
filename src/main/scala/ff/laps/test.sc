@@ -14,7 +14,7 @@ object test {
 
         println(nseq.length + "-" + nacc)
 
-        req(nseq2, ntail, if (acc.length < nacc.length) acc else nacc)
+        req(nseq2, ntail, if (acc.length < nacc.length) nacc else acc)
       } else {
         acc
       }
@@ -29,12 +29,12 @@ object test {
   lb += 2
   lb += 3
   lb += 4
+  lb += 5
   lb += 1
   lb += 2
   lb += 3
   lb += 4
-  lb += 1
-  lb += 2
+  lb += 5
 
   longuestSubSequence(lb)
 }
