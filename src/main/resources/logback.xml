@@ -16,7 +16,7 @@
         </rollingPolicy>
         <encoder>
             <pattern>
-                %replace(%-50.-300msg){'\\r\\n', ' '}%n
+                %-50.-300msg%n
             </pattern>
         </encoder>
     </appender>

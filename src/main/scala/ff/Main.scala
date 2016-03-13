@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.ByteString
-import ff.laps.ConstantLaps
+import ff.laps.{SlottedLaps, LearnedLaps, ConstantLaps}
 import ff.messages._
 import io.scalac.amqp
 import io.scalac.amqp.{Queue, Connection, Delivery}
@@ -61,7 +61,7 @@ object Main extends App {
     rabbit.queueDeclare(Queue(VELOCITY_TEMPLATE, durable = true)),
     rabbit.queueDeclare(Queue(PENALTY_TEMPLATE, durable = true)),
     rabbit.queueDeclare(Queue(ROUND_PASSED_TEMPLATE, durable = true))
-  )), 30 second)
+  )), 2 second)
 
   val announces = rabbit.publish(exchange = "", routingKey = ANNOUNCE)
   val powers = rabbit.publish(exchange = "", routingKey = POWER)
@@ -76,22 +76,22 @@ object Main extends App {
   val publisher =
     Source
       .actorRef[Power](5, OverflowStrategy.dropHead)
+        .map{c =>
+        println(c)
+        c}
       .map(serialize)
       .toMat(Sink.fromSubscriber(powers))(Keep.left)
       .run()
 
-  def emitPower(power: Int): Unit = {
+  def emitPower(power: Double): Unit =
+    emitPower(math.round(power).toInt)
+
+  def emitPower(power: Int): Unit =
     publisher ! Power(id, accessCode, power)
-  }
 
-  val lapper = ConstantLaps.props(110)
-
-  val receiver = system.actorOf(lapper)
+  val receiver = system.actorOf(SlottedLaps.props)
   Source
     .combine(sensors, penalties, roundTimes, velocities, raceStart, raceStop)(Merge(_))
-      .map{x =>
-        println(x)
-        x}
     .runWith(Sink.actorRef(receiver, () => println("finished")))
 
   val keepAlive =
