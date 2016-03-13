@@ -1,9 +1,7 @@
 package ff.tokens
 
-/**
-  * Created by mukel on 3/12/16.
-  */
-trait Token {
+sealed trait Token {
+
   def duration: Long
 
   def sameTypeAs(that: Token): Boolean = (this, that) match {
@@ -14,7 +12,7 @@ trait Token {
   }
 
 }
-//trait Unknown extends Token
+
 case class Straight(val duration: Long) extends Token
 case class LeftTurn(val duration: Long) extends Token
 case class RightTurn(val duration: Long) extends Token

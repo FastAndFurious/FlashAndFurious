@@ -66,8 +66,6 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
   final def explorer: Receive = {
     case Sensor(_, t, _, gyro, _, _) => {
 
-      //val t = System.currentTimeMillis()
-
       val gyroZ = correctGyroZ(gyro._3)
       val direction = Integer.signum(gyroZ)
 
@@ -85,8 +83,6 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
         if (direction == 0 && history.size > TokensNeeded) {
 
           // a straight road detected
-          // go berseker?
-
           val predictedDuration = predictStraightDuration()
 
           if (predictedDuration > 300) {
@@ -124,7 +120,7 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
       val candidate = text(i + pattern.size)
       if (candidate.isInstanceOf[Straight]) {
         var j = 0
-        var jbound = pattern.size
+        val jbound = pattern.size
 
         var matches = 0
         while (j < jbound) {
@@ -150,7 +146,7 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
 }
 
 object PilotManager {
+
   def props(emitPower: Int => Unit): Props = Props(classOf[PilotManager], emitPower)
+
 }
-
-
