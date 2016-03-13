@@ -14,13 +14,13 @@ import scala.concurrent.duration._
 
 class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
 
-  val CruiseSpeed = 110 // safe speed
-  val CurveSpeed = 120 // boost on curve
+  var CruiseSpeed = 120 // safe speed
+  val CurveSpeed = 125 // boost on curve
 
-  val MaxSpeed = 180
+  val MaxSpeed = 200
 
   val InitialTokensToIgnore = 2
-  val TokensNeeded = 50
+  val TokensNeeded = 55
   val TokenSignatureLength = 10
 
   val smoother: StatefulFilter = new Kalman(4000, 1, 4, 0.5, 0)
@@ -54,8 +54,10 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
   final def fallbackHandler: Receive = {
     case RaceStop => context.become(waitOnStart)
     case _ : RoundTime => curLap += 1
+      CruiseSpeed += 1
     case _ : Velocity | Power => /* ignore */
     case _ : Penalty => emitPower(CruiseSpeed)
+      CruiseSpeed = (CruiseSpeed - 1) max 120
     case m @ _ =>
       log.warning(s"RaceStop expected: received $m")
   }
@@ -89,17 +91,17 @@ class PilotManager(emitPower: Int => Unit) extends Actor with ActorLogging {
 
           if (predictedDuration > 300) {
             emitPower(MaxSpeed)
-            context.system.scheduler.scheduleOnce((predictedDuration / 3) millis) {
+            context.system.scheduler.scheduleOnce((0.25 * predictedDuration) millis) {
               emitPower(CruiseSpeed)
             }
           }
         }
 
         if (direction != 0) {
-            emitPower(CurveSpeed)
-            context.system.scheduler.scheduleOnce(100 millis) {
-              emitPower(CruiseSpeed)
-            }
+          emitPower(CurveSpeed)
+          context.system.scheduler.scheduleOnce(100 millis) {
+            emitPower(CruiseSpeed)
+          }
         }
 
         curTimestamp = t
