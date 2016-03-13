@@ -1,8 +1,5 @@
 package ff.filters
 
-/**
-  * Created by mukel on 3/12/16.
-  */
 class Kalman(var processNoiseCov: Double,
              var measurementNoiseCov: Double,
              var estimationErrorCovariance: Double,
@@ -22,4 +19,5 @@ class Kalman(var processNoiseCov: Double,
 
     x
   }
+
 }

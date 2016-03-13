@@ -1,8 +1,5 @@
 package ff.filters
 
-/**
-  * Created by mukel on 3/12/16.
-  */
 class AverageWindow(size: Int, initialValue: Double) extends StatefulFilter {
 
   assert(size > 2)
@@ -19,4 +16,5 @@ class AverageWindow(size: Int, initialValue: Double) extends StatefulFilter {
     sum / size
     //(sum - values.min - values.max) / (size - 2)
   }
+
 }
