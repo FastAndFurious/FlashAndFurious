@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.ByteString
-import ff.laps.ConstantLaps
+
 import ff.messages._
 import io.scalac.amqp
 import io.scalac.amqp.{Queue, Connection, Delivery}
@@ -84,13 +84,13 @@ object Main extends App {
     publisher ! Power(id, accessCode, power)
   }
 
-  val lapper = ConstantLaps.props(110)
+  //lval lapper = Receiver.p//ConstantLaps.props(110)
 
-  val receiver = system.actorOf(lapper)
+  val receiver = system.actorOf(PilotManager.props(emitPower))
   Source
     .combine(sensors, penalties, roundTimes, velocities, raceStart, raceStop)(Merge(_))
       .map{x =>
-        println(x)
+        //println(x)
         x}
     .runWith(Sink.actorRef(receiver, () => println("finished")))
 
